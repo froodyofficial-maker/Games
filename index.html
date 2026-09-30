@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Block PvP — Minecraft Style</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080b0d;font-family:Arial,Helvetica,sans-serif}body{display:flex;align-items:center;justify-content:center;color:#fff}
+#game{position:relative;width:min(100vw,1280px);height:min(100vh,720px);overflow:hidden;background:#79bde8;box-shadow:0 0 50px #000}
+canvas{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;cursor:crosshair}
+#hud{position:absolute;inset:0;pointer-events:none;color:#fff;text-shadow:2px 2px #000;z-index:5}
+#top{position:absolute;top:14px;left:14px;right:14px;display:flex;justify-content:space-between;gap:10px}.panel{background:rgba(0,0,0,.48);border:1px solid rgba(255,255,255,.18);border-radius:6px;padding:8px 11px;font-weight:800;font-size:13px;backdrop-filter:blur(4px)}
+#cross{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:27px;font-weight:900}
+#inventory{position:absolute;left:50%;bottom:20px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:5px}
+#hpbar{width:300px;height:13px;background:#1b1b1b;border:2px solid #111;box-shadow:0 2px 0 #000;position:relative}.hpfill{height:100%;width:100%;background:linear-gradient(#65df56,#29972d);transition:width .15s}.hptext{position:absolute;inset:0;text-align:center;font-size:10px;font-weight:900;line-height:9px;text-shadow:1px 1px #000}
+#hotbar{display:flex;background:rgba(25,25,25,.9);border:3px solid #111;box-shadow:0 3px 0 #555,0 5px 10px #0008;padding:3px}.slot{width:52px;height:52px;border:2px solid #777;background:#414141;display:flex;align-items:center;justify-content:center;font-size:25px;position:relative;color:white}.slot.selected{border-color:#fff;background:#666;box-shadow:inset 0 0 0 2px #aaa}.slot span{position:absolute;right:3px;bottom:1px;font-size:11px;color:#fff}
+#hint{position:absolute;left:12px;bottom:12px;background:#0009;padding:7px 9px;border-radius:5px;font-size:11px;color:#eee}
+#menu{position:absolute;inset:0;background:linear-gradient(135deg,#071017ee,#111827ed);display:flex;align-items:center;justify-content:center;z-index:20;overflow:auto}.home{width:min(900px,94%);padding:28px}.brand{text-align:center;margin-bottom:20px}.brand h1{font-size:48px;line-height:1;margin:0;font-weight:1000;letter-spacing:2px;text-shadow:5px 5px #000}.brand h1 span{color:#65d84d}.brand p{margin:9px 0 0;color:#b9c3ca;font-size:14px}
+.setup{display:grid;grid-template-columns:1.1fr .9fr;gap:18px}.card{background:linear-gradient(145deg,#1a2228,#11161a);border:1px solid #39434a;border-radius:12px;padding:18px;box-shadow:0 15px 35px #0007}.card h2{font-size:13px;letter-spacing:1.5px;margin:0 0 13px;color:#aeb9bf}.bots{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.botchoice{border:2px solid #39434a;background:#151b20;border-radius:9px;padding:12px 7px;color:#fff;cursor:pointer;text-align:center}.botchoice.selected{border-color:#70df53;background:#1b2b1b;box-shadow:0 0 0 1px #70df5344}.botpic{height:92px;position:relative;margin:auto;width:70px}.head{position:absolute;width:44px;height:44px;left:13px;top:5px;background:#c78d61;border:3px solid #222}.body{position:absolute;width:48px;height:43px;left:11px;top:48px;background:#b52b2b;border:3px solid #222}.eye{position:absolute;width:6px;height:6px;background:#111;top:22px}.e1{left:25px}.e2{left:39px}.classic .body{background:#2877c9}.ender .head{background:#43325d}.ender .body{background:#5e3c9a}.knight .head{background:#9a9a9a}.knight .body{background:#8c2020}.botchoice strong{font-size:12px}.botchoice small{display:block;color:#8e999f;margin-top:4px;font-size:10px}
+.difficulty{display:flex;gap:7px;flex-wrap:wrap}.diff{border:1px solid #475158;background:#151b20;color:#ddd;border-radius:7px;padding:9px 12px;cursor:pointer;font-weight:800}.diff.selected{border-color:#70df53;color:#fff;background:#1d3020}.play{width:100%;margin-top:17px;border:0;border-bottom:4px solid #2d6721;border-radius:7px;background:#56bd3d;color:white;padding:15px;font-size:18px;font-weight:1000;cursor:pointer}.play:hover{background:#65d84d}.controls{font-size:11px;color:#8e999f;line-height:1.7;margin-top:11px}.preview{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:240px}.previewTitle{font-weight:900;margin-bottom:10px}.preview .bigbot{transform:scale(1.6);margin:15px}.tip{color:#88949b;font-size:11px;text-align:center;margin-top:13px}
+#result{display:none;color:#ffd84a;font-size:18px;font-weight:900;margin:8px 0}
+.damage{position:absolute;color:#fff;font-weight:1000;font-size:22px;text-shadow:2px 2px #000;animation:damage .6s forwards;z-index:30;pointer-events:none}@keyframes damage{to{transform:translateY(-45px);opacity:0}}
+@media(max-width:700px){.setup{grid-template-columns:1fr}.preview{display:none}.brand h1{font-size:35px}.bots{grid-template-columns:repeat(3,1fr)}#hint{display:none}#hpbar{width:230px}.slot{width:44px;height:44px}}
+</style>
+</head>
+<body>
+<div id="game">
+<canvas id="canvas" width="1280" height="720"></canvas>
+<div id="hud">
+ <div id="top"><div class="panel">BLOCK PvP</div><div class="panel">BOT ♥ <span id="botHP">20</span>/20</div></div>
+ <div id="cross">+</div>
+ <div id="inventory">
+   <div id="hpbar"><div id="hpfill" class="hpfill"></div><div id="hptext" class="hptext">HP 20 / 20</div></div>
+   <div id="hotbar">
+    <button class="slot selected" data-slot="0" type="button">⚔<span>1</span></button>
+    <button class="slot" data-slot="1" type="button">🪵<span>2</span></button>
+    <button class="slot" data-slot="2" type="button">🧱<span>3</span></button>
+    <button class="slot" data-slot="3" type="button">⛏<span>4</span></button>
+   </div>
+ </div>
+ <div id="hint">WASD move · SPACE jump · Mouse look · Left click attack/mine · Right click place · ESC unlock</div>
+</div>
+<div id="menu">
+ <div class="home">
+  <div class="brand"><h1>BLOCK <span>PvP</span></h1><p>Minecraft-style first-person bot battles</p></div>
+  <div class="setup">
+   <div class="card">
+    <h2>CHOOSE YOUR OPPONENT</h2>
+    <div class="bots">
+      <button class="botchoice selected" data-bot="classic" type="button"><div class="botpic classic"><div class="head"><i class="eye e1"></i><i class="eye e2"></i></div><div class="body"></div></div><strong>CLASSIC</strong><small>Balanced</small></button>
+      <button class="botchoice" data-bot="knight" type="button"><div class="botpic knight"><div class="head"><i class="eye e1"></i><i class="eye e2"></i></div><div class="body"></div></div><strong>RED KNIGHT</strong><small>Fast</small></button>
+      <button class="botchoice" data-bot="ender" type="button"><div class="botpic ender"><div class="head"><i class="eye e1"></i><i class="eye e2"></i></div><div class="body"></div></div><strong>ENDER</strong><small>Aggressive</small></button>
+    </div>
+    <h2 style="margin-top:20px">DIFFICULTY</h2>
+    <div class="difficulty"><button class="diff" data-diff="easy" type="button">EASY</button><button class="diff selected" data-diff="normal" type="button">NORMAL</button><button class="diff" data-diff="hard" type="button">HARD</button></div>
+    <div id="result"></div>
+    <button id="play" class="play" type="button">PLAY BATTLE</button>
+    <div class="controls"><b>WASD</b> move · <b>SPACE</b> jump · <b>MOUSE</b> look · <b>LEFT CLICK</b> attack · <b>RIGHT CLICK</b> place block · <b>1–4</b> hotbar</div>
+   </div>
+   <div class="card preview"><div class="previewTitle">CURRENT BOT</div><div id="previewBot" class="botpic bigbot classic"><div class="head"><i class="eye e1"></i><i class="eye e2"></i></div><div class="body"></div></div><div class="tip">Click the game once to capture your mouse. Move the mouse freely to look around.</div></div>
+  </div>
+ </div>
+</div>
+<script>
+(()=>{
+const canvas=document.getElementById('canvas'),ctx=canvas.getContext('2d'),menu=document.getElementById('menu'),play=document.getElementById('play');
+const botHP=document.getElementById('botHP'),hpfill=document.getElementById('hpfill'),hptext=document.getElementById('hptext'),result=document.getElementById('result'),preview=document.getElementById('previewBot');
+const MAP=["1111111111111111","1000000000000001","1000000220000001","1000000200000001","1000000000000001","1000110001100001","1000000000000001","1000000000000001","1000220000020001","1000200000000001","1000001111000001","1000000000000001","1000000000000001","1000000000000001","1000000000000001","1111111111111111"].map(r=>r.split('').map(Number));
+const P={x:3.5,y:3.5,a:0,h:20,cd:0,z:0,vz:0,onGround:true},B={x:12.5,y:12.5,h:20,cd:0};
+const keys={};let running=false,over=false,selected=0,blocks=10,last=performance.now(),botStyle='classic',difficulty='normal';
+function wall(x,y){const X=Math.floor(x),Y=Math.floor(y);return X<0||Y<0||X>=16||Y>=16||MAP[Y][X]!==0}
+function free(x,y){const r=.18;return !wall(x-r,y-r)&&!wall(x+r,y-r)&&!wall(x-r,y+r)&&!wall(x+r,y+r)}
+function move(o,dx,dy){if(free(o.x+dx,o.y))o.x+=dx;if(free(o.x,o.y+dy))o.y+=dy}
+function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y)}
+function adiff(a,b){return Math.atan2(Math.sin(a-b),Math.cos(a-b))}
+function ray(x,y,a,max=20){for(let d=.03;d<max;d+=.025){const xx=x+Math.cos(a)*d,yy=y+Math.sin(a)*d;if(wall(xx,yy))return{d,x:xx,y:yy}}return{d:max,x:x+Math.cos(a)*max,y:y+Math.sin(a)*max}}
+function shade(hex,f){const n=parseInt(hex.slice(1),16),r=n>>16&255,g=n>>8&255,b=n&255;return`rgb(${Math.floor(r*f)},${Math.floor(g*f)},${Math.floor(b*f)})`}
+function updateHP(){hpfill.style.width=Math.max(0,P.h/20*100)+'%';hptext.textContent='HP '+P.h+' / 20'}
+function damage(o,n){o.h=Math.max(0,o.h-n);if(o===P)updateHP();else botHP.textContent=o.h;const d=document.createElement('div');d.className='damage';d.textContent='-'+n;d.style.left=(o.x/16*100)+'%';d.style.top=(o.y/16*100)+'%';document.getElementById('game').appendChild(d);setTimeout(()=>d.remove(),650)}
+function finish(text){over=true;result.style.display='block';result.textContent=text;play.textContent='PLAY AGAIN';menu.style.display='flex';if(document.pointerLockElement===canvas)document.exitPointerLock()}
+function attack(){if(!running||over||selected!==0||P.cd>0)return;P.cd=.42;const ta=Math.atan2(B.y-P.y,B.x-P.x);if(Math.abs(adiff(P.a,ta))<.48&&dist(P,B)<2.35){damage(B,3);if(B.h<=0)finish('YOU WON! The bot has been defeated.')}}
+function mine(){if(!running||over)return;const r=ray(P.x,P.y,P.a,3),X=Math.floor(r.x),Y=Math.floor(r.y);if(r.d<2.8&&X>0&&Y>0&&X<15&&Y<15&&MAP[Y][X]===2){MAP[Y][X]=0;blocks++}}
+function place(){if(!running||over||selected===0||selected===3||blocks<=0)return;const X=Math.floor(P.x+Math.cos(P.a)*1.25),Y=Math.floor(P.y+Math.sin(P.a)*1.25);if(X>0&&Y>0&&X<15&&Y<15&&MAP[Y][X]===0&&(Math.floor(P.x)!==X||Math.floor(P.y)!==Y)){MAP[Y][X]=2;blocks--}}
+function botAI(dt){if(B.h<=0)return;const dx=P.x-B.x,dy=P.y-B.y,d=Math.hypot(dx,dy),a=Math.atan2(dy,dx);const speeds={easy:.45,normal:.72,hard:1.0};if(d>1.45){const s=speeds[difficulty]*dt;move(B,Math.cos(a)*s,Math.sin(a)*s)}const interval=difficulty==='hard'?.65:difficulty==='easy'?1.15:.9;if(d<1.7&&B.cd<=0){B.cd=interval;damage(P,difficulty==='hard'?3:2);if(P.h<=0)finish('YOU DIED! The bot got you.')}if(B.cd>0)B.cd-=dt}
+function jump(){if(!running||over||!P.onGround)return;P.vz=5.2;P.onGround=false}
+function draw(){const w=canvas.width,h=canvas.height,horizon=h*.46-P.z*18;ctx.fillStyle='#79bde8';ctx.fillRect(0,0,w,h/2);ctx.fillStyle='#6b9f4e';ctx.fillRect(0,h/2,w,h/2);const FOV=Math.PI/3,N=320;for(let i=0;i<N;i++){const cam=(i/N-.5)*FOV,r=ray(P.x,P.y,P.a+cam),cd=r.d*Math.cos(cam),wh=Math.min(h*1.8,h*.95/(cd+.01)),y=horizon-wh/2,gx=Math.floor(r.x),gy=Math.floor(r.y),light=Math.max(.18,1-cd/15);ctx.fillStyle=shade(MAP[gy]?.[gx]===2?'#87552d':'#777',light);ctx.fillRect(i*w/N,y,w/N+1,wh)}const ba=Math.atan2(B.y-P.y,B.x-P.x),dif=adiff(ba,P.a),bd=dist(P,B);if(Math.abs(dif)<FOV*.72&&bd<18){const sx=(.5+dif/FOV)*w,bh=Math.min(h*1.15,h*1.05/(bd+.2)),bw=bh*.45,by=horizon-bh*.54;let body='#2877c9',head='#c78d61';if(botStyle==='knight'){body='#8c2020';head='#999'}if(botStyle==='ender'){body='#5e3c9a';head='#43325d'}ctx.fillStyle=body;ctx.fillRect(sx-bw/2,by,bw,bh*.58);ctx.fillStyle=head;ctx.fillRect(sx-bw*.38,by-bh*.28,bw*.76,bh*.32);ctx.fillStyle='#111';ctx.fillRect(sx-bw*.18,by-bh*.16,bw*.12,bh*.08);ctx.fillRect(sx+bw*.06,by-bh*.16,bw*.12,bh*.08);ctx.fillStyle='#111';ctx.fillRect(sx-bw*.43,by-bh*.43,bw*.86,6);ctx.fillStyle='#42df4d';ctx.fillRect(sx-bw*.43,by-bh*.43,bw*.86*(B.h/20),6)}if(selected===0){ctx.save();ctx.translate(w*.76,h*.82);ctx.rotate(-.4);ctx.fillStyle='#704327';ctx.fillRect(-8,25,16,45);ctx.fillStyle='#aaa';ctx.fillRect(-5,-52,10,80);ctx.fillStyle='#eee';ctx.fillRect(-2,-52,4,80);ctx.restore()}}
+function reset(){P.x=3.5;P.y=3.5;P.a=0;P.h=20;P.cd=0;P.z=0;P.vz=0;P.onGround=true;B.x=12.5;B.y=12.5;B.h=20;B.cd=0;blocks=10;selected=0;over=false;running=true;botHP.textContent='20';updateHP();result.style.display='none';menu.style.display='none';document.querySelectorAll('.slot').forEach((x,i)=>x.classList.toggle('selected',i===0));canvas.focus();canvas.requestPointerLock?.()}
+play.addEventListener('click',reset);
+document.querySelectorAll('.botchoice').forEach(b=>b.addEventListener('click',()=>{botStyle=b.dataset.bot;document.querySelectorAll('.botchoice').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');preview.className='botpic bigbot '+botStyle;preview.innerHTML='<div class="head"><i class="eye e1"></i><i class="eye e2"></i></div><div class="body"></div>'}));
+document.querySelectorAll('.diff').forEach(b=>b.addEventListener('click',()=>{difficulty=b.dataset.diff;document.querySelectorAll('.diff').forEach(x=>x.classList.remove('selected'));b.classList.add('selected')}));
+document.querySelectorAll('.slot').forEach(s=>s.addEventListener('click',()=>{selected=Number(s.dataset.slot);document.querySelectorAll('.slot').forEach(x=>x.classList.remove('selected'));s.classList.add('selected')}));
+window.addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();jump()}keys[e.code]=true;if(e.code.startsWith('Digit')){const n=Number(e.code.slice(5));if(n>=1&&n<=4){selected=n-1;document.querySelectorAll('.slot').forEach((x,i)=>x.classList.toggle('selected',i===selected))}}if(e.code==='KeyR'&&running)reset()});window.addEventListener('keyup',e=>keys[e.code]=false);
+canvas.addEventListener('click',()=>{if(running){canvas.requestPointerLock?.();if(selected===3)mine();else attack()}});canvas.addEventListener('contextmenu',e=>{e.preventDefault();place()});document.addEventListener('mousemove',e=>{if(running&&document.pointerLockElement===canvas)P.a+=e.movementX*.0025});
+function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;if(running&&!over){const s=3.1*dt;if(keys.KeyW)move(P,Math.cos(P.a)*s,Math.sin(P.a)*s);if(keys.KeyS)move(P,-Math.cos(P.a)*s,-Math.sin(P.a)*s);if(keys.KeyA)move(P,Math.cos(P.a-Math.PI/2)*s,Math.sin(P.a-Math.PI/2)*s);if(keys.KeyD)move(P,Math.cos(P.a+Math.PI/2)*s,Math.sin(P.a+Math.PI/2)*s);P.vz-=13*dt;P.z+=P.vz*dt;if(P.z<=0){P.z=0;P.vz=0;P.onGround=true}if(P.cd>0)P.cd-=dt;botAI(dt)}draw();requestAnimationFrame(loop)}updateHP();requestAnimationFrame(loop)}
+)();
+</script>
+</body>
+</html>
